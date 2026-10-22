@@ -35,9 +35,19 @@ Build as a regular user (needs `/etc/subuid` entries), then install as root:
 sudo ./install.sh     # /opt/codex/codex.sif (group lab-pk, 640) and /usr/local/bin/codex
 ```
 
-`install.sh` takes the group from `CODEX_GROUP` (default `lab-pk`). Only members of that group can run the image. To update Codex, change `CODEX_VERSION` in `codex.def`, rebuild, reinstall; running sessions are not interrupted.
+The image is built in two stages. `base.def` → `base.sif` holds the slow parts (system packages, R, Python, bioinformatics tools) and is rebuilt only when `base.def` changes or with `./build.sh --base` (e.g. to pick up package updates). `codex.def` → `codex.sif` adds Codex, `config/` and the startup script on top of `base.sif`, so changes there rebuild quickly.
 
-If the build runs out of space in `/tmp`, set `APPTAINER_TMPDIR` and `APPTAINER_CACHEDIR` to a larger disk, e.g. `/mnt/scratch`.
+`install.sh` takes the group from `CODEX_GROUP` (default `lab-pk`). Only members of that group can run the image. To update Codex to the latest release (or a given one), rebuilding only the fast stage and installing:
+```bash
+./update.sh           # or ./update.sh 0.163.0
+```
+It does nothing when the installed image already has that version. Running sessions are not interrupted. For weekly updates, add to root's crontab (`sudo crontab -e`):
+```
+0 4 * * 1 /path/to/codex-image/update.sh >> /var/log/codex-update.log 2>&1
+```
+`update.sh` edits `CODEX_VERSION` in `codex.def`; commit that change.
+
+Build with the default `APPTAINER_TMPDIR` (`/tmp`): with `--fakeroot`, unpacking `base.sif` for the second stage fails when it points to `/mnt/scratch`.
 
 ## Isolation
 

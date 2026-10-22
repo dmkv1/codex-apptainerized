@@ -90,6 +90,7 @@ apptainer run \
   --workdir "$workdir" \
   --home "$CODEX_HOME_HOST:/home/codex" \
   --pwd "$pwd_in" \
+  --bind /dev/full \
   "${binds[@]}" \
   "${env_args[@]}" \
   "$SIF" \
