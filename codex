@@ -32,7 +32,7 @@ pwd_in="/home/codex"
 
 case "${1:-}" in
   # Account commands need no project folder
-  login|logout|--version|-V|--help|-h|help) ;;
+  login|logout|update|--version|-V|--help|-h|help) ;;
   *)
     project="$(realpath -e "$PWD")"
     check_dir "$project"

@@ -18,6 +18,7 @@ From: base.sif
     export LC_ALL=en_US.UTF-8
     export R_LIBS_USER="$HOME/R/library"
     export MAMBA_ROOT_PREFIX="${MAMBA_ROOT_PREFIX:-$HOME/micromamba}"
+    export PATH="$HOME/.local/bin:$PATH"
 
 %post
     set -eux
@@ -25,7 +26,8 @@ From: base.sif
     touch /opt/codex-config/condarc
 
     # ============================================
-    # Codex CLI and Code Mode host (same release)
+    # Fallback Codex CLI and Code Mode host (same release), used when the
+    # self-updating install in the user's Codex home is unavailable
     # ============================================
     mkdir -p /opt/codex
     curl -fsSL \
@@ -40,9 +42,21 @@ From: base.sif
     [ -f "$HOME/.bashrc" ] || cp /etc/skel/.bashrc "$HOME/.bashrc"
     [ -f "$HOME/.profile" ] || cp /etc/skel/.profile "$HOME/.profile"
     python3 /opt/codex-config/sync_agents.py /opt/codex-config/AGENTS.md "$HOME/.codex/AGENTS.md"
+
+    # Self-updating standalone Codex in the persistent home; the image's copy is the fallback
+    codex_bin="$HOME/.codex/packages/standalone/current/bin/codex"
+    if [ ! -x "$codex_bin" ]; then
+        echo "First run: installing Codex into your Codex home (it keeps itself updated from there)..."
+        curl -fsSL https://chatgpt.com/codex/install.sh | CODEX_NON_INTERACTIVE=1 sh
+    fi
+    if [ ! -x "$codex_bin" ]; then
+        echo "Codex install failed; using the version bundled in the image" >&2
+        codex_bin=/opt/codex/bin/codex
+    fi
+
     # Private mount propagation in a nested namespace clears Apptainer's unbindable
     # root, which Codex's bubblewrap sandbox needs to bind-mount
-    exec unshare --user --map-current-user --mount --propagation private codex "$@"
+    exec unshare --user --map-current-user --mount --propagation private "$codex_bin" "$@"
 
 %test
     codex --version

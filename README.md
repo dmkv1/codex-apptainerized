@@ -17,6 +17,8 @@ codex /mnt/data/NGS/Projects/OTHER   # also gives read-write access to a second 
 codex "summarize the scripts here"   # other arguments go to Codex
 ```
 
+In the Codex input box, Ctrl+J starts a new line and Shift+Insert pastes text.
+
 `codex` refuses to start in your home folder, its parents, or shallow paths like `/mnt/data`.
 
 Inside the container: R with tidyverse, qs2, hdf5r and Seurat; Python with pandas/numpy/scipy/matplotlib, pysam, h5py and anndata; samtools, bcftools, bedtools, tabix/bgzip, mosdepth; git, gh, pandoc, Node.js. Personal R packages install to `~/R/library` inside the Codex home and persist.
@@ -37,15 +39,7 @@ sudo ./install.sh     # /opt/codex/codex.sif (group lab-pk, 640) and /usr/local/
 
 The image is built in two stages. `base.def` → `base.sif` holds the slow parts (system packages, R, Python, bioinformatics tools) and is rebuilt only when `base.def` changes or with `./build.sh --base` (e.g. to pick up package updates). `codex.def` → `codex.sif` adds Codex, `config/` and the startup script on top of `base.sif`, so changes there rebuild quickly.
 
-`install.sh` takes the group from `CODEX_GROUP` (default `lab-pk`). Only members of that group can run the image. To update Codex to the latest release (or a given one), rebuilding only the fast stage and installing:
-```bash
-./update.sh           # or ./update.sh 0.163.0
-```
-It does nothing when the installed image already has that version. Running sessions are not interrupted. For weekly updates, add to root's crontab (`sudo crontab -e`):
-```
-0 4 * * 1 /path/to/codex-image/update.sh >> /var/log/codex-update.log 2>&1
-```
-`update.sh` edits `CODEX_VERSION` in `codex.def`; commit that change.
+`install.sh` takes the group from `CODEX_GROUP` (default `lab-pk`). Only members of that group can run the image. Codex updates itself. On a user's first run the image installs the official standalone Codex into their Codex home (`~/codex/codex-home/.codex/packages/standalone`), and Codex updates that copy on its own or with `codex update`. The Codex in the image (`CODEX_VERSION` in `codex.def`) is used only when that install is missing and cannot be downloaded. Rebuilding the image does not change the version users run.
 
 Build with the default `APPTAINER_TMPDIR` (`/tmp`): with `--fakeroot`, unpacking `base.sif` for the second stage fails when it points to `/mnt/scratch`.
 

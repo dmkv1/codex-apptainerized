@@ -25,8 +25,13 @@ The container exists only while Codex runs. Anything that must outlast the sessi
   (use `envs/ENV.yml` when a project uses several environments).
 - If `mamba` reports no host installation, environments land in the private home and work only inside this container; tell the user.
 
-## Heavy work
+## Heavy work and pipelines
 Long or resource-heavy jobs (Nextflow, Snakemake, alignment, large batch jobs) are run by the user on the host. Write the scripts and the exact commands, and leave running them to the user.
+
+There is no apptainer, singularity or docker inside this container. Pipelines that run their steps in containers (`snakemake --sdm apptainer`, `--use-singularity`, `nextflow -profile singularity`) cannot run here. What you can do:
+- write and edit workflow files, configs and sample sheets;
+- check them with a dry run and lint from a snakemake environment, without the container flags: `mamba run -n ENV snakemake -n` and `mamba run -n ENV snakemake --lint` (find ENV with `mamba env list`);
+- give the user the full command to run on the host, from the project folder.
 
 ## Data protection
 The lab handles patient data. Do not copy data outside the project folder, upload it, or paste file contents into external services. Read only what the task needs.
