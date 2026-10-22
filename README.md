@@ -1,50 +1,44 @@
-# Containerized Codex for bioinformatics
+# Containerized Codex for the lab
 
-## Prerequisites
-- Docker installed, current user in the `docker` group.
-- A shared lab group GID for `/mnt/data` access — `docker_build.sh`/`export_alias.sh` assume GID `1001`. Edit the `--group-add 1001` line in `export_alias.sh` if it differs on this machine.
+Codex CLI runs in an Apptainer container as the calling user. It sees only the current project folder, an optional second folder, and a private persistent home (`~/codex/codex-home`). Files it creates are owned by the user and group-writable (`umask 002`); in setgid project folders they get the folder's group.
 
-## Setup
+## For users
+
+Sign in once (ChatGPT account; enable device code login in ChatGPT security settings first):
 ```bash
-git clone <repo-url> ~/codex/codex-setup/codex-main
-cd ~/codex/codex-setup/codex-main
-./docker_build.sh          # builds the codex-main image
-./export_alias.sh          # installs the `codex` shell function into ~/.bashrc
-source ~/.bashrc
+codex login --device-auth
 ```
 
-The build script resolves its own location, so the repository can be cloned anywhere.
-
-## Usage
-From any project directory:
+Then, from a project folder:
 ```bash
-codex
-```
-Mounts `$(pwd)` at the same path in the container (workdir too), plus `~/codex/codex-home` as the persistent `/home/codex`. Host UID/GID are passed through so file ownership matches.
-
-The launcher starts this development container with Docker's default seccomp profile disabled (`--security-opt seccomp=unconfined`). This is required for Codex's Bubblewrap sandbox to create its namespaces. Because it is a Docker *runtime* setting, after updating the setup run `./export_alias.sh` and `source ~/.bashrc` (or open a new shell); rebuilding the image alone does not apply it. Do not reuse this setting for an untrusted or production-facing container.
-
-On the first run, follow Codex's sign-in flow. The resulting credentials and configuration persist in `~/codex/codex-home/.codex`. As an alternative for API-based access, export `OPENAI_API_KEY` in the host shell before running `codex`; the launcher forwards it to the container.
-
-The initial R setup also installs several public GitHub packages. To avoid GitHub's unauthenticated API rate limit, create a short-lived fine-grained GitHub token and pass it only for that initial run:
-```bash
-read -rsp "GitHub PAT: " GITHUB_PAT; echo
-export GITHUB_PAT
-codex
-unset GITHUB_PAT
-```
-The launcher forwards `GITHUB_PAT` to the container but does not save it in `codex-home` or `~/.bashrc`.
-
-Existing Claude credentials are not reused: run Codex's sign-in flow once after the migration. `export_alias.sh` replaces an earlier managed Claude launcher block in `~/.bashrc` and creates the new persistent home directory.
-
-To also mount a second host path read-write (e.g. shared data outside the project), pass it as the first argument:
-```bash
-codex /mnt/data/some/path
+cd /mnt/data/NGS/Projects/MY_PROJECT
+codex                          # Codex works in this folder
+codex /mnt/data/NGS/Projects/OTHER   # also gives read-write access to a second folder
+codex "summarize the scripts here"   # other arguments go to Codex
 ```
 
-Other arguments are passed to Codex, so `codex --help` and `codex "review this script"` work as expected.
+`codex` refuses to start in your home folder, its parents, or shallow paths like `/mnt/data`.
 
-## Notes
-- Container is stateless except for the bind-mounted workspace and `~/codex/codex-home`.
-- First run installs R packages into `~/codex/codex-home/R` (persists after).
-- Codex and its Code Mode host are installed together in the image at a pinned version. Update `CODEX_VERSION` in `dockerfile` and rebuild them together.
+Inside the container: R with tidyverse, qs2, hdf5r and Seurat; Python with pandas/numpy/scipy/matplotlib, pysam, h5py and anndata; samtools, bcftools, bedtools, tabix/bgzip, mosdepth; git, gh, pandoc, Node.js. Personal R packages install to `~/R/library` inside the Codex home and persist.
+
+`mamba` inside the container is the host installation (detected from `MAMBA_ROOT_PREFIX`, `CONDA_EXE`, `/opt/miniforge3`, `~/miniforge3`; override with `CODEX_MAMBA_ROOT`). It is mounted at its host path together with the environment and package folders from `~/.condarc`, so environments created by Codex work on the host as well. Without a host installation, `mamba` falls back to the bundled micromamba and its environments live only in the Codex home.
+
+Codex reads lab instructions from `~/codex/codex-home/.codex/AGENTS.md`. The "lab defaults" block in it is refreshed when the image is updated; everything below it is yours to edit.
+
+Codex keeps its own sandbox active inside the container: without approval it writes only to the project folder(s) and has no network for commands it runs.
+
+## For the admin
+
+Build as a regular user (needs `/etc/subuid` entries), then install as root:
+```bash
+./build.sh            # creates codex.sif
+sudo ./install.sh     # /opt/codex/codex.sif (group lab-pk, 640) and /usr/local/bin/codex
+```
+
+`install.sh` takes the group from `CODEX_GROUP` (default `lab-pk`). Only members of that group can run the image. To update Codex, change `CODEX_VERSION` in `codex.def`, rebuild, reinstall; running sessions are not interrupted.
+
+If the build runs out of space in `/tmp`, set `APPTAINER_TMPDIR` and `APPTAINER_CACHEDIR` to a larger disk, e.g. `/mnt/scratch`.
+
+## Isolation
+
+The launcher uses `apptainer run --containall` (no host home, clean environment, private `/tmp`, PID and IPC namespaces) with explicit binds only. The host network is shared. Proxy variables are forwarded if set.
