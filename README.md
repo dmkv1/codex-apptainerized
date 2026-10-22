@@ -19,6 +19,8 @@ codex "summarize the scripts here"   # other arguments go to Codex
 
 In the Codex input box, Ctrl+J starts a new line and Shift+Insert pastes text.
 
+Each session is a container that exists only while Codex runs: on exit, everything running inside it stops, whatever Codex's exit message says. Conversations are kept, so `codex resume` (from the same project folder) continues one.
+
 `codex` refuses to start in your home folder, its parents, or shallow paths like `/mnt/data`.
 
 Inside the container: R with tidyverse, qs2, hdf5r and Seurat; Python with pandas/numpy/scipy/matplotlib, pysam, h5py and anndata; samtools, bcftools, bedtools, tabix/bgzip, mosdepth; git, gh, pandoc, Node.js. Personal R packages install to `~/R/library` inside the Codex home and persist.

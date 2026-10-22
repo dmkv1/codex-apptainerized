@@ -96,4 +96,11 @@ apptainer run \
   "${binds[@]}" \
   "${env_args[@]}" \
   "$SIF" \
-  "${codex_args[@]}" "$@"
+  "${codex_args[@]}" "$@" || status=$?
+
+# Codex reports that work continues in a background server; that server ran inside
+# the container, which is gone now
+if [ -n "${project:-}" ] && [ -t 2 ]; then
+  echo "codex: the container has stopped, and with it any running work. To continue a conversation, run 'codex resume' from this folder." >&2
+fi
+exit "${status:-0}"
