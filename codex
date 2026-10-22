@@ -11,11 +11,13 @@ CODEX_HOME_HOST="${CODEX_HOME_HOST:-$HOME/codex/codex-home}"
 
 die() { echo "codex: $*" >&2; exit 1; }
 
-# Refuses the home directory, its parents, and shallow paths like /mnt/data
+# Refuses the home directory, its parents, system folders and shared data roots
 check_dir() {
   local d="$1"
-  [ "$(tr -cd / <<<"$d" | wc -c)" -ge 3 ] \
-    || die "refusing to give Codex access to $d (too broad). cd into a project folder first."
+  case "$d" in
+    /|/bin|/boot|/dev|/etc|/home|/lib|/lib64|/media|/mnt|/opt|/proc|/root|/run|/sbin|/srv|/sys|/tmp|/usr|/var|/mnt/data|/mnt/scratch)
+      die "refusing to give Codex access to $d (too broad). cd into a project folder first." ;;
+  esac
   case "$HOME/" in
     "$d"/*) die "refusing to give Codex access to $d (contains your home directory). cd into a project folder first." ;;
   esac
