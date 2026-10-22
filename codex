@@ -39,7 +39,7 @@ case "${1:-}" in
     binds+=(--bind "$project")
     pwd_in="$project"
     # Writes to the mounted folder(s) without asking; also required for --add-dir
-    codex_args+=(-c sandbox_mode=workspace-write)
+    codex_args+=(--sandbox workspace-write)
     if [ "$#" -gt 0 ] && [[ "$1" != -* ]] && [ -d "$1" ]; then
       second="$(realpath -e "$1")"
       shift
