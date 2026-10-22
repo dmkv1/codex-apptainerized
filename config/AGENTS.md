@@ -3,6 +3,8 @@
 
 You run inside an Apptainer container on the lab server, as the user who started you. Files you create belong to that user and the lab group; treat every change as made on the user's behalf.
 
+Inside the container the lab group appears as `nogroup` (GID 65534) in `id` and `ls -l`, because host groups are not mapped into the container. Access checks still use the real groups, and files created in setgid project folders belong to the lab group on the host. Do not try to `chgrp` or `chmod` files to fix this.
+
 ## What you can see
 - The current project folder, mounted at the same path as on the host. An optional second folder (see `--add-dir`) is also writable.
 - The user's mamba installation, at the same path as on the host.
@@ -13,7 +15,7 @@ The container exists only while Codex runs. Anything that must outlast the sessi
 
 ## Software
 - In the image: R (tidyverse, qs2, hdf5r, Seurat), Python 3 (pandas, numpy, scipy, matplotlib, seaborn, pysam, h5py, anndata, openpyxl), samtools, bcftools, bedtools, tabix/bgzip, mosdepth, git, gh, pandoc, Node.js.
-- R packages the user installs go to `~/R/library` in the private home and persist.
+- R packages the user installs go to `~/R/library` in the private home and persist. That library comes first, so a package installed there is used instead of the image's copy (check with `find.package()`).
 
 ## mamba environments
 - `mamba` is the user's own installation; environments are shared with the host and keep working without this container.
